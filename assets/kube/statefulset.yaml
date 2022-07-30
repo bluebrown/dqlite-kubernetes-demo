@@ -1,0 +1,85 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dqlite-app
+spec:
+  selector:
+    matchLabels:
+      app: dqlite-app
+  serviceName: dqlite-app-headless
+  replicas: 3
+  # parallel pod strategy is required
+  # since the cluster wont boot up without
+  # minimum 2 nodes
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: dqlite-app
+    spec:
+      securityContext:
+        fsGroup: 2000
+        runAsNonRoot: false
+      containers:
+        - name: dqlite-app
+          image: docker.io/bluebrown/dqlite-app
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+            - containerPort: 9000
+              name: sql
+              protocol: TCP
+          env:
+            # these environment variables are required
+            # for the pod to construct the dns names
+            # for the dqlite cluster
+            - name: K8S_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: K8S_SERVICE_NAME
+              value: dqlite-app-headless
+            - name: K8S_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: K8S_CLUSTER_SUFFIX
+              value: "cluster.local"
+          livenessProbe:
+            httpGet:
+              path: /live
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          startupProbe:
+            failureThreshold: 30
+            periodSeconds: 10
+            httpGet:
+              path: /ready
+              port: http
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+              readOnly: false
+            - name: certs
+              mountPath: /app/certs
+              readOnly: true
+      # the certificate is required to be mounted
+      # since the app needs tls to use hostnames
+      volumes:
+        - name: certs
+          secret:
+            secretName: dqlite-app-cluster-cert
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
