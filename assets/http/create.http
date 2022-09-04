@@ -1,0 +1,6 @@
+POST /authors HTTP/1.1
+Host: localhost:8080
+Accept: application/json; charset=utf-8
+Content-Type: application/json; charset=utf-8
+
+{ "name": "John Cena", "bio": "alpha male" }

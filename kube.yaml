@@ -1,14 +1,49 @@
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dqlite-app-headless
+spec:
+  selector:
+    app: dqlite-app
+  clusterIP: None
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: sql
+      protocol: TCP
+      port: 9000
+      targetPort: sql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dqlite-app
+spec:
+  selector:
+    app: dqlite-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: sql
+      protocol: TCP
+      port: 9000
+      targetPort: sql
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: dqlite-app
 spec:
+  serviceName: dqlite-app-headless
+  replicas: 3
   selector:
     matchLabels:
       app: dqlite-app
-  serviceName: dqlite-app-headless
-  replicas: 3
   # parallel pod strategy is required
   # since the cluster wont boot up without
   # minimum 2 nodes
@@ -20,7 +55,7 @@ spec:
     spec:
       securityContext:
         fsGroup: 2000
-        runAsNonRoot: false
+        runAsNonRoot: true
       containers:
         - name: dqlite-app
           image: docker.io/bluebrown/dqlite-app
@@ -36,41 +71,47 @@ spec:
             # these environment variables are required
             # for the pod to construct the dns names
             # for the dqlite cluster
-            - name: K8S_POD_NAME
+            - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: K8S_SERVICE_NAME
+            - name: SERVICE_NAME
               value: dqlite-app-headless
-            - name: K8S_NAMESPACE
+            - name: NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: K8S_CLUSTER_SUFFIX
-              value: "cluster.local"
-          livenessProbe:
-            httpGet:
-              path: /live
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /ready
-              port: http
-          startupProbe:
-            failureThreshold: 30
-            periodSeconds: 10
-            httpGet:
-              path: /ready
-              port: http
+          # FIXME:
+          # probes are disabled because
+          # otherwise the nodes cannot connect to each
+          # other during initialization which leads
+          # to them never becoming ready
+          #
+          # livenessProbe:
+          #   httpGet:
+          #     path: /healthz
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /readyz
+          #     port: http
+          # startupProbe:
+          #   failureThreshold: 30
+          #   periodSeconds: 10
+          #   httpGet:
+          #     path: /readyz
+          #     port: http
+          #
           volumeMounts:
             - name: data
-              mountPath: /app/data
+              mountPath: /opt/app/data
               readOnly: false
             - name: certs
-              mountPath: /app/certs
+              mountPath: /opt/app/certs
               readOnly: true
       # the certificate is required to be mounted
       # since the app needs tls to use hostnames
+      # create the manually certificate before deployment
       volumes:
         - name: certs
           secret:

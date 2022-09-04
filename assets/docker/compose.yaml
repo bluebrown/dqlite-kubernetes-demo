@@ -1,63 +1,56 @@
-name: dqlite
-
 x-app:
   &app
   image: dqlite-app:local
+  user: "${UID:-1000}"
+  command: -v 2
   volumes:
-    - ../../.certs:/app/certs:ro
-    - ../../.data:/app/data:rw,delegated
-    - ../../bin:/app/bin:ro
-  healthcheck:
-    test: /app/bin/httpcheck http://localhost:8080/ready
+    - ../certs:/opt/app/certs:ro
+    - ../../.data:/opt/app/data:rw,delegated
 
-x-env:
+x-common-env:
   &env
-  K8S_SERVICE_NAME: dqlite-app-headless
-  K8S_NAMESPACE: sandbox
-  K8S_CLUSTER_DOMAIN: cluster.local
+  SERVICE_NAME: null
+  NAMESPACE: null
+  CLUSTER_DOMAIN: null
 
 services:
   ingress-controller:
     image: haproxy:lts-alpine
-    volumes: [ ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro ]
-    ports: [ 8080:8080 ]
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - 8080:8080
+    environment: *env
 
   app-0:
     <<: *app
-    container_name: dqlite-app-0
     environment:
+      POD_NAME: app-0
       <<: *env
-      K8S_POD_NAME: dqlite-app-0
-      DATA_DIR: /app/data/0
     networks:
       default:
         aliases:
-          - dqlite-app-0.dqlite-app-headless.sandbox.svc.cluster.local
-          - dqlite-app-headless
+          - "${SERVICE_NAME}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"
+          - "app-0.${SERVICE_NAME}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"
 
   app-1:
     <<: *app
-    container_name: dqlite-app-1
     environment:
+      POD_NAME: app-1
       <<: *env
-      K8S_POD_NAME: dqlite-app-1
-      DATA_DIR: /app/data/1
     networks:
       default:
         aliases:
-          - dqlite-app-1.dqlite-app-headless.sandbox.svc.cluster.local
-          - dqlite-app-headless
+          - "${SERVICE_NAME}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"
+          - "app-1.${SERVICE_NAME}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"
 
   app-2:
     <<: *app
-    container_name: dqlite-app-2
     environment:
+      POD_NAME: app-2
       <<: *env
-      K8S_POD_NAME: dqlite-app-2
-      DATA_DIR: /app/data/2
     networks:
       default:
         aliases:
-          - dqlite-app-2.dqlite-app-headless.sandbox.svc.cluster.local
-          - dqlite-app-headless
-
+          - "${SERVICE_NAME}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"
+          - "app-2.${SERVICE_NAME}.${NAMESPACE}.svc.${CLUSTER_DOMAIN}"

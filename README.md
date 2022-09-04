@@ -1,21 +1,10 @@
-# dqlite kubernetes demo
+# Dqlite Kubernetes Demo
 
-This is a demo application for dqlite wich is intended to be deployed in kubernetes. The local setup with compose reflects this intention by using kubernetes like network aliases.
-
-## Local Development
-
-The make default command starts the app locally. You can [review the compose template](./assets/docker/) to learn more.
+The command will create a namespace in the current cluster with name `sandbox` and deploy the application there. The image will be pulled from [dockerhub](https://hub.docker.com/r/bluebrown/dqlite-app). You can customize the makefile and build the image yourself to push it to your own registry and deploy to a namespace of your choice.
 
 ```bash
-make deps
-make
-make test
-```
-
-## Kubernetes
-
-the app can be deployed as kubernetes statefulset. You can [review the manifests](./assets/kube/) to learn more.
-
-```bash
-make kube.apply
+# deploy to kubernetes
+make deploy 
+# clean up
+make teardown
 ```

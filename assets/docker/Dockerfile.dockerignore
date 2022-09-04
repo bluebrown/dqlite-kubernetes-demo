@@ -1,0 +1,9 @@
+/.data/
+/.vscode/
+/assets/
+/cmd/standalone/
+.env
+.gitignore
+Makefile
+/README.md
+/tools.go
