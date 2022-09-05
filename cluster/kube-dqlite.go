@@ -43,8 +43,15 @@ func MakeTlsConfig(certDir string) (listen, dial *tls.Config, err error) {
 // i.e. a kubernetes StatefulSet
 //
 //	$(POD_NAME).$(SERVICE_NAME).$(NAMESPACE).svc.$(CLUSTER_DOMAIN):$(SQL_PORT)
-func ComputeAddrs(pod, svc, ns, domain string, sqlPort string) (podAddr string, clusterAddrs []string) {
-	suffix := fmt.Sprintf("%s.%s.svc.%s", svc, ns, domain)
+func ComputeAddrs(pod, svc, ns, domain string, sqlPort string, useFqdn bool) (podAddr string, clusterAddrs []string) {
+	var suffix string
+	if useFqdn {
+		// use the fully qualified domain name as described above
+		suffix = fmt.Sprintf("%s.%s.svc.%s", svc, ns, domain)
+	} else {
+		// use only pod.service relying on the search option in /etc/resolv.conf
+		suffix = fmt.Sprintf("%s", svc)
+	}
 	isZero := strings.HasSuffix(pod, "-0")
 	if !isZero {
 		zero := regexp.MustCompile(`-\d+$`).ReplaceAllString(pod, "-0")

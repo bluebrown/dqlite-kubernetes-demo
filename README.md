@@ -8,3 +8,7 @@ make deploy
 # clean up
 make teardown
 ```
+
+## Kubernetes
+
+Review the [kube.yaml](./kube.yaml) file to learn more about the required configuration. There are some caveats.

@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 
 	"github.com/canonical/go-dqlite/app"
@@ -48,6 +50,10 @@ func run(ctx context.Context) error {
 	svcName := cluster.GetEnv("SERVICE_NAME", "")
 	nsName := cluster.GetEnv("NAMESPACE", "default")
 	domain := cluster.GetEnv("CLUSTER_DOMAIN", "cluster.local")
+	useFqdn, err := strconv.ParseBool(cluster.GetEnv("USE_FQDN", "false"))
+	if err != nil {
+		return fmt.Errorf("could not parse USE_FQDN to boolen: %w", err)
+	}
 
 	// create the TLS config
 	listen, dial, err := cluster.MakeTlsConfig(certDir)
@@ -64,7 +70,7 @@ func run(ctx context.Context) error {
 	}
 
 	// get the addresses to use
-	podAddr, clusterAddrs := cluster.ComputeAddrs(podName, svcName, nsName, domain, sqlPort)
+	podAddr, clusterAddrs := cluster.ComputeAddrs(podName, svcName, nsName, domain, sqlPort, useFqdn)
 
 	// create a new dqlite app
 	dqlite, err := app.New(

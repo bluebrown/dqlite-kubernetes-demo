@@ -17,6 +17,7 @@
         "kubernetes",
         "kyleconroy",
         "readyz",
+        "resolv",
         "sqlc"
     ]
 }
