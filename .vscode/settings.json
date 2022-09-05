@@ -1,0 +1,23 @@
+{
+    // required for dqlite
+    "go.toolsEnvVars": {
+        "CGO_LDFLAGS_ALLOW": ".*"
+    },
+    // slince spelling errors
+    "cSpell.words": [
+        "bluebrown",
+        "dqlite",
+        "felixge",
+        "healthz",
+        "hostnames",
+        "httprouter",
+        "httpsnoop",
+        "julienschmidt",
+        "klog",
+        "kubernetes",
+        "kyleconroy",
+        "readyz",
+        "resolv",
+        "sqlc"
+    ]
+}

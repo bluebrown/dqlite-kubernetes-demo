@@ -1,0 +1,15 @@
+version: 2
+sql:
+  - engine: "sqlite"
+    schema: "schema.sql"
+    queries: "query.sql"
+    gen:
+      go:
+        package: "model"
+        out: "../../model"
+        overrides:
+          - db_type: "text"
+            go_type:
+              type: "string"
+              pointer: true
+            nullable: true

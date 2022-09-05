@@ -1,14 +1,57 @@
 ---
+# the headless service is used to govern the
+# network identify of the pods
+apiVersion: v1
+kind: Service
+metadata:
+  name: dqlite-app-headless
+spec:
+  clusterIP: None
+  # this is required to let the cluster form
+  # without disruption.
+  # Regular clients will use the normal service
+  # which checks for readiness before routing
+  # so it should be fine
+  publishNotReadyAddresses: true
+  selector:
+    app: dqlite-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: sql
+      protocol: TCP
+      port: 9000
+      targetPort: sql
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dqlite-app
+spec:
+  selector:
+    app: dqlite-app
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: sql
+      protocol: TCP
+      port: 9000
+      targetPort: sql
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: dqlite-app
 spec:
+  serviceName: dqlite-app-headless
+  replicas: 3
   selector:
     matchLabels:
       app: dqlite-app
-  serviceName: dqlite-app-headless
-  replicas: 3
   # parallel pod strategy is required
   # since the cluster wont boot up without
   # minimum 2 nodes
@@ -20,7 +63,7 @@ spec:
     spec:
       securityContext:
         fsGroup: 2000
-        runAsNonRoot: false
+        runAsNonRoot: true
       containers:
         - name: dqlite-app
           image: docker.io/bluebrown/dqlite-app
@@ -36,41 +79,47 @@ spec:
             # these environment variables are required
             # for the pod to construct the dns names
             # for the dqlite cluster
-            - name: K8S_POD_NAME
+            - name: POD_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
-            - name: K8S_SERVICE_NAME
+            - name: SERVICE_NAME
               value: dqlite-app-headless
-            - name: K8S_NAMESPACE
+            - name: NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: K8S_CLUSTER_SUFFIX
-              value: "cluster.local"
+            # determines if the fqdn should be used
+            # or only <pod>.<headless-service>
+            # setting this to false, makes the startup
+            # less smooth but is useful when planning
+            # to promote the app across namespaces
+            - name: USE_FQDN
+              value: "1"
           livenessProbe:
             httpGet:
-              path: /live
+              path: /healthz
               port: http
           readinessProbe:
             httpGet:
-              path: /ready
+              path: /readyz
               port: http
           startupProbe:
             failureThreshold: 30
             periodSeconds: 10
             httpGet:
-              path: /ready
+              path: /readyz
               port: http
           volumeMounts:
             - name: data
-              mountPath: /app/data
+              mountPath: /opt/app/data
               readOnly: false
             - name: certs
-              mountPath: /app/certs
+              mountPath: /opt/app/certs
               readOnly: true
       # the certificate is required to be mounted
       # since the app needs tls to use hostnames
+      # create the manually certificate before deployment
       volumes:
         - name: certs
           secret:
